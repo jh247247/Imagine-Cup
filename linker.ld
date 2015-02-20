@@ -1,4 +1,5 @@
 ENTRY(Reset_Handler)
+
 MEMORY {
 	/*Adust in following line variable LENGTH to RAM size of target MCU*/
 	RAM (RWX) : ORIGIN = 0x20000000 , LENGTH = 20K
@@ -144,4 +145,3 @@ of the section so we begin them at 0. */
 .note.gnu.arm.ident 0 : { KEEP (*(.note.gnu.arm.ident)) }
 /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) }
 }
-

@@ -24,7 +24,7 @@ INCLUDE+=-I$(STMLIB)/STM32F10x_StdPeriph_Driver/inc
 #-Os optimize for size, enables all '-O2' optimizations that do not typically increase code size and other code size optimizations
 #default settings for release version: COMMONFLAGS=-O3 -g mcpu=cortex-m3 -mthumb
 #default settings for debug version: COMMONFLAGS=-O0 -g -mcpu=cortex-m3 -mthumb
-COMMONFLAGS= -O3 -g -mcpu=cortex-m3 -mthumb
+COMMONFLAGS= -Os -g -mcpu=cortex-m3 -mthumb
 CFLAGS+=$(COMMONFLAGS) -Wall -Werror $(INCLUDE)
 #Adjust the following line to the tiype of MCU used
 CFLAGS+=-D STM32F10X_HD

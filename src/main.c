@@ -88,14 +88,6 @@ unsigned int readADC1(unsigned char channel)
 
 
 
-void drawLine(int x, int y1,int y2) {
-  int i;
-  if(y1>240)y1=240;
-  for(i = y1; i < y2; i++) {
-    LCD_SetPoint(x,i,0xF800);
-  }
-}
-
 void clock_init(){
   /*Configure all clocks to max for best performance.
    * If there are EMI, power, or noise problems, try slowing the clocks*/
@@ -109,7 +101,7 @@ void clock_init(){
   /* Start with HSI clock (internal 8mhz), divide by 2 and multiply by 9 to
    * get maximum allowed frequency: 36Mhz
    * Enable PLL, wait till it's stable, then select it as system clock*/
-  RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_9);
+  RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_16);
   RCC_PLLCmd(ENABLE);
   while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET) {}
   RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
@@ -121,6 +113,8 @@ void clock_init(){
 
   /* Set ADC clk to 9MHz (14MHz max, 18MHz default)*/
   RCC_ADCCLKConfig(RCC_PCLK2_Div4);
+
+  SystemCoreClock = 64000000; // set the core clock since this isn't "standard".
 
   /*To save power, use below functions to stop the clock to ceratin
    * peripherals
@@ -134,17 +128,13 @@ void clock_init(){
 #define AVG 5
 int main(int argc, char *argv[])
 {
-  int i = 0;
-  int cnt = 0;
-  int max, maxi;
+  /* int i = 0; */
+  /* int cnt = 0; */
 
-  float fft[FFT_LEN];
-  float avgfft[FFT_LEN];
-  char buf[32];
+  /* float fft[FFT_LEN]; */
+  /* float avgfft[FFT_LEN]; */
 
   clock_init();
-  LCD_Configuration();
-  LCD_Initialization();
   ADC_Configuration();
   TIM_init();
   USART12_Init();
@@ -157,48 +147,37 @@ int main(int argc, char *argv[])
 
   while(1) {
 
-    if(g_adcFlag == 1) {
-      fft[i++] = readADC1(ADC_Channel_8);
-      g_adcFlag = 0;
-    }
+    /* if(g_adcFlag == 1) { */
+    /*   fft[i++] = readADC1(ADC_Channel_8); */
+    /*   g_adcFlag = 0; */
+    /* } */
 
-    // FFT is full, render the screen.
-    if(i == FFT_LEN) {
-      TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+    /* // FFT is full, render the screen. */
+    /* if(i == FFT_LEN) { */
+    /*   TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE); */
 
 
-      for(i=0;i< FFT_LEN; i++) {
-        fft[i]/=256;
-      }
+    /*   /\* for(i=0;i< FFT_LEN; i++) { *\/ */
+    /*   /\*   fft[i]/=256; *\/ */
+    /*   /\* } *\/ */
 
-      rfft(fft,FFT_LEN);
-      for(i = 0; i < FFT_LEN/4; i++) {
-        avgfft[i] += fft[i]/AVG;
-      }
-      cnt++;
-      i = 0;
-      TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-    }
+    /*   rfft(fft,FFT_LEN); */
+    /*   for(i = 0; i < FFT_LEN; i++) { */
+    /*     avgfft[i] += fft[i]/AVG; */
+    /*   } */
+    /*   cnt++; */
+    /*   i = 0; */
+    /*   TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE); */
+    /* } */
 
-    if(cnt == AVG) {
+    //if(cnt == AVG) {
 
-      TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
-      LCD_Clear(0);
-      max = 0;
-      maxi = 0;
-      for(i = 0; i < FFT_LEN/2; i++) {
-	if(fft[i] > max) {
-	  max = fft[i]; //float to int, dont care.
-	  maxi = i;
-	}
-        drawLine(i,0,fft[i]);
-      }
-      TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-      itoa(buf,maxi*(44000/FFT_LEN),10);
-      ESP8266_sendPacket("UDP","192.168.1.10","40",buf, strlen(buf));
+      ESP8266_sendPacket("UDP","192.168.1.10","50042","hello",5);
+      /* for(i = 0; i < FFT_LEN; i++) { */
+      /* 	avgfft[i] = 0; */
+      /* } */
 
-      i = 0;
-      cnt = 0;
-    }
+      /* cnt = 0; */
+      //}
   }
 }
