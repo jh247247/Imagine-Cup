@@ -96,7 +96,7 @@ void clock_init(){
   /*000 Zero wait state, if 0  MHz < SYSCLK <= 24 MHz
     001 One wait state, if  24 MHz < SYSCLK <= 48 MHz
     010 Two wait states, if 48 MHz < SYSCLK <= 72 MHz */
-  FLASH_SetLatency(FLASH_Latency_1);
+  FLASH_SetLatency(FLASH_Latency_2);
 
   /* Start with HSI clock (internal 8mhz), divide by 2 and multiply by 9 to
    * get maximum allowed frequency: 36Mhz
@@ -122,17 +122,22 @@ void clock_init(){
    */
 }
 
+int fix_fftr(short f[], int m, int inverse);
+
 // has to be a power of 2, otherwise you get a hang.
 #define FFT_LEN 512
+#define LOG2FFT 9
 
 #define AVG 5
 int main(int argc, char *argv[])
 {
-  /* int i = 0; */
-  /* int cnt = 0; */
+  int i = 0;
+  int cnt = 0;
 
-  /* float fft[FFT_LEN]; */
-  /* float avgfft[FFT_LEN]; */
+  short fft[FFT_LEN];
+  short avgfft[FFT_LEN];
+
+  //char buf[32];
 
   clock_init();
   ADC_Configuration();
@@ -140,44 +145,86 @@ int main(int argc, char *argv[])
   USART12_Init();
   ESP8266_init();
 
+  USART1_PutString("### START ###\n");
+
   ESP8266_connect("Home&Hosed","143c91ffbf323f9b07439610a4");
   if(ESP8266_isConnected()) {
-    USART2_PutString("ESP8266 Connected!\n");
+    USART1_PutString("ESP8266 Connected!\n");
   }
 
+
+  if(ESP8266_setCIPMUX(1)) { // NOTE: CIPMUX has to be 1 to have
+    // server mode
+    USART1_PutString("ESP8266 set CIPMUX 1\n");
+  } else {
+    USART1_PutString("### ESP8266 CIPMUX FAIL ###\n");
+  }
+
+  if(ESP8266_setupServer(1, 50042)) {
+    USART1_PutString("ESP8266 server started!\n");
+  } else {
+    USART1_PutString("### ESP8266 SERVER FAIL ###\n");
+  }
+
+  // TODO: add fallback to make access point for config if
+  // connecting fails
+
+  USART_setMatch(1,"IPD+"); // string to search for in server mode
+  USART_setMatch(0,"setup"); // string to search for to config i guess
+
+
   while(1) {
+    switch(USART_checkMatch()) {
+    case 0:
+      // handle serial comms.
+      break;
+    case 1:
+      // right now I don't care what is sent. just that it knows when
+      // data comes in over the wifi
+      USART1_PutString("ESP8266 packet rec!\n");
+      ESP8266_sendPacket("UDP", "192.168.1.10", "50042", "hello", 5);
+      // handle server stuff.
+      break;
+    default:
+      break;
+    }
+    if(g_adcFlag == 1) {
+      fft[i] = readADC1(ADC_Channel_8);
+      i++;
+      g_adcFlag = 0;
+    }
 
-    /* if(g_adcFlag == 1) { */
-    /*   fft[i++] = readADC1(ADC_Channel_8); */
-    /*   g_adcFlag = 0; */
-    /* } */
+    if(i >= FFT_LEN) {
+      TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
 
-    /* // FFT is full, render the screen. */
-    /* if(i == FFT_LEN) { */
-    /*   TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE); */
+      // rfft(fft,FFT_LEN);
+      fix_fftr(fft,LOG2FFT+1,0);
+      for(i = 0; i < FFT_LEN; i++) {
+        avgfft[i] += fft[i]/AVG;
+      }
+      cnt++;
+      i = 0;
+      TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+    }
+
+    if(cnt == AVG) {
+      for(i = 0; i < FFT_LEN; i++) {
+        /* if(i < FFT_LEN/2) { */
+        /*   itoa(buf,avgfft[i],10); */
+        /*   USART1_PutString(buf); */
+        /*   if(i < FFT_LEN/2-1) { */
+        /*     USART1_PutChar(','); */
+        /*   } */
+        /* } */
 
 
-    /*   /\* for(i=0;i< FFT_LEN; i++) { *\/ */
-    /*   /\*   fft[i]/=256; *\/ */
-    /*   /\* } *\/ */
+        avgfft[i] = 0;
+      }
+      //USART1_PutChar('\0');
 
-    /*   rfft(fft,FFT_LEN); */
-    /*   for(i = 0; i < FFT_LEN; i++) { */
-    /*     avgfft[i] += fft[i]/AVG; */
-    /*   } */
-    /*   cnt++; */
-    /*   i = 0; */
-    /*   TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE); */
-    /* } */
+      cnt = 0;
+    }
 
-    //if(cnt == AVG) {
-
-      ESP8266_sendPacket("UDP","192.168.1.10","50042","hello",5);
-      /* for(i = 0; i < FFT_LEN; i++) { */
-      /* 	avgfft[i] = 0; */
-      /* } */
-
-      /* cnt = 0; */
-      //}
+    asm("wfe");
   }
 }

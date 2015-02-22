@@ -5,10 +5,30 @@
 #include "stm32f10x_adc.h"
 #include "stm32f10x_usart.h"
 #include "stm32f10x_flash.h"
+#include "misc.h"
 #include "esp8266.h"
 #include "timer.h"
 
 #include "usart.h"
+
+#include "string.h"
+
+#define USART_BUF_LEN 50
+#define USART_AMOUNT 2
+
+// rx buffer so we don't really need timeouts anymore.
+volatile char g_usart_rx[USART_AMOUNT][USART_BUF_LEN];
+volatile int g_usart_rx_index[USART_AMOUNT];
+
+// match stuff so we can be on the lookout for specific strings.
+char g_usart_rx_match[USART_AMOUNT][USART_BUF_LEN]; // store the string we are
+// searching for
+volatile int g_usart_rx_match_index[USART_AMOUNT]; // keep the current string we
+// are looking for
+int g_usart_rx_match_length[USART_AMOUNT]; // total length of the string
+
+
+
 
 void USART12_Init(void)
 {
@@ -18,33 +38,32 @@ void USART12_Init(void)
   GPIO_InitTypeDef gpio_init_struct;
 
   /* Enalbe clock for USART1, AFIO and GPIOA */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO |
-                         RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOA,
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA,
                          ENABLE);
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
 
 
   /* Set the usart output to the remapped pins */
-  GPIO_PinRemapConfig(GPIO_Remap_USART1, ENABLE);
+  //GPIO_PinRemapConfig(GPIO_Remap_USART1, ENABLE);
 
-  /* GPIOB PIN6 alternative function Tx */
-  gpio_init_struct.GPIO_Pin = GPIO_Pin_6;
-  gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
-  gpio_init_struct.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_Init(GPIOB, &gpio_init_struct);
-  /* GPIOB PIN7 alternative function Rx */
-  gpio_init_struct.GPIO_Pin = GPIO_Pin_7;
-  gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
-  gpio_init_struct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_Init(GPIOB, &gpio_init_struct);
-
-  /* GPIOA PIN9 alternative function Tx */
+  /* GPIOA PIN2 alternative function Tx */
   gpio_init_struct.GPIO_Pin = GPIO_Pin_2;
   gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
   gpio_init_struct.GPIO_Mode = GPIO_Mode_AF_PP;
   GPIO_Init(GPIOA, &gpio_init_struct);
-  /* GPIOA PIN9 alternative function Rx */
+  /* GPIOA PIN3 alternative function Rx */
   gpio_init_struct.GPIO_Pin = GPIO_Pin_3;
+  gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init_struct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(GPIOA, &gpio_init_struct);
+
+  /* GPIOA PIN9 alternative function Tx */
+  gpio_init_struct.GPIO_Pin = GPIO_Pin_9;
+  gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init_struct.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_Init(GPIOA, &gpio_init_struct);
+  /* GPIOA PIN10 alternative function Rx */
+  gpio_init_struct.GPIO_Pin = GPIO_Pin_10;
   gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
   gpio_init_struct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
   GPIO_Init(GPIOA, &gpio_init_struct);
@@ -53,7 +72,7 @@ void USART12_Init(void)
   /* Baud rate 9600, 8-bit data, One stop bit
    * No parity, Do both Rx and Tx, No HW flow control
    */
-  usart1_init_struct.USART_BaudRate = 9600;
+  usart1_init_struct.USART_BaudRate = 115200;
   usart1_init_struct.USART_WordLength = USART_WordLength_8b;
   usart1_init_struct.USART_StopBits = USART_StopBits_1;
   usart1_init_struct.USART_Parity = USART_Parity_No ;
@@ -62,17 +81,50 @@ void USART12_Init(void)
   /* Configure USART1 */
   USART_Init(USART1, &usart1_init_struct);
   /* Enable RXNE interrupt */
-  //USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-  /* Enable USART1 global interrupt */
-  //NVIC_EnableIRQ(USART1_IRQn);
+  USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+
+  /* Enable RXNE interrupt */
+  NVIC_InitTypeDef n;
+  n.NVIC_IRQChannel = USART1_IRQn;
+  n.NVIC_IRQChannelPreemptionPriority = 0;
+  n.NVIC_IRQChannelSubPriority = 1;
+  n.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&n);
 
   /* Enable USART1 */
   USART_Cmd(USART1, ENABLE);
 
+  // USART2 setup
+
+  // esp8266 expects this.
+  usart1_init_struct.USART_BaudRate = 9600;
+
   USART_Init(USART2, &usart1_init_struct);
   USART_Cmd(USART2, ENABLE);
+
+  /* Enable RXNE interrupt */
+  USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+
+  n.NVIC_IRQChannel = USART2_IRQn;
+  NVIC_Init(&n);
 }
 
+
+void USART_setMatch(int usart, char* str) {
+  strcpy(g_usart_rx_match[usart], str);
+  g_usart_rx_match_length[usart] = strlen(str);
+  g_usart_rx_match_index[usart] = 0; // reset index so that we restart
+  // the state machine
+}
+
+// reset matches index
+void USART_resetMatch(int usart) {
+  g_usart_rx_match_index[usart] = 0;
+}
+
+int USART_checkMatch(int usart) {
+  return g_usart_rx_match_index[usart] - g_usart_rx_match_length[usart];
+}
 
 void USART1_PutChar(char ch)
 {
@@ -105,25 +157,49 @@ void USART2_PutString(char * str)
 }
 
 unsigned char USART_waitForString(USART_TypeDef* USARTx, char* ref, int timeout) {
-  int state = 0;
-  char c = 0;
-  g_sysTick = 0;
+  int port;
 
+  // HACK, fixme
+  if(USARTx == USART1) {
+    port = 0;
+  } else {
+    port = 1;
+  }
+
+  g_sysTick = 0;
+  USART_setMatch(port, ref);
   while(g_sysTick < timeout) {
-    if(USART_GetFlagStatus(USART1, USART_IT_RXNE) != RESET) {
-      c = USART_ReceiveData(USART1);
-      if(c == ref[state]) {
-        // found next char, continue
-        state++;
-      } else if(ref[state] == 0) {
-        // got to end of string!
-        // return success
-        return 1;
-      } else {
-        // char does not match, continue
-        state = 0;
-      }
+    if(USART_checkMatch(port) == 0) {
+      return 1;
     }
   }
   return 0;
+}
+
+
+void USART_rxCheck(int usart, char rx) {
+  // add to the buffer
+  if(g_usart_rx_index[usart] < USART_BUF_LEN) {
+    g_usart_rx[usart][g_usart_rx_index[usart]] = rx;
+    g_usart_rx_index[usart]++;
+  }
+
+  if(g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
+    g_usart_rx_match_index[usart]++;
+  }
+
+}
+
+void USART1_IRQHandler()
+{
+  if(USART_GetFlagStatus(USART1, USART_IT_RXNE) != RESET) {
+    USART_rxCheck(0, USART_ReceiveData(USART1));
+  }
+}
+
+void USART2_IRQHandler()
+{
+  if(USART_GetFlagStatus(USART2, USART_IT_RXNE) != RESET) {
+    USART_rxCheck(1, USART_ReceiveData(USART2));
+  }
 }
