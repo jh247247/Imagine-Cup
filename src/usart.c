@@ -17,8 +17,8 @@
 #define USART_AMOUNT 2
 
 // rx buffer so we don't really need timeouts anymore.
-volatile char g_usart_rx[USART_AMOUNT][USART_BUF_LEN];
-volatile int g_usart_rx_index[USART_AMOUNT];
+/* volatile char g_usart_rx[USART_AMOUNT][USART_BUF_LEN]; */
+/* volatile int g_usart_rx_index[USART_AMOUNT]; */
 
 // match stuff so we can be on the lookout for specific strings.
 char g_usart_rx_match[USART_AMOUNT][USART_BUF_LEN]; // store the string we are
@@ -178,13 +178,14 @@ unsigned char USART_waitForString(USART_TypeDef* USARTx, char* ref, int timeout)
 
 
 void USART_rxCheck(int usart, char rx) {
-  // add to the buffer
-  if(g_usart_rx_index[usart] < USART_BUF_LEN) {
-    g_usart_rx[usart][g_usart_rx_index[usart]] = rx;
-    g_usart_rx_index[usart]++;
-  }
+  /* // add to the buffer */
+  /* if(g_usart_rx_index[usart] < USART_BUF_LEN) { */
+  /*   g_usart_rx[usart][g_usart_rx_index[usart]] = rx; */
+  /*   g_usart_rx_index[usart]++; */
+  /* } */
 
   if(g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
+    USART1_PutChar(rx);
     g_usart_rx_match_index[usart]++;
   }
 
