@@ -21,6 +21,7 @@
 #include "usart.h"
 #include "timer.h"
 #include "esp8266.h"
+#include "ImagineNode.h"
 #include <string.h>
 
 void ADC_Configuration(void)
@@ -149,13 +150,8 @@ int main(int argc, char *argv[])
 
 
   while(1) {
-    if(USART_checkMatch(1) == 0) {
-      // right now I don't care what is sent. just that it knows when
-      // data comes in over the wifi
-      USART1_PutString("ESP8266 packet rec!\n");
-      ESP8266_sendPacket("UDP", "192.168.1.10", "50042", "hello", 5);
+    IN_handleServer();
 
-    }
     if(g_adcFlag == 1) {
       fft[i] = readADC1(ADC_Channel_8);
       i++;

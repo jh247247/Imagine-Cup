@@ -4,29 +4,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "util.h"
 
 /* TODO: clean this garbage up */
 
-static char *i2a(unsigned i, char *a, unsigned r)
-{
-  if (i / r > 0)
-    a = i2a(i / r, a, r);
-  *a = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % r];
-  return a + 1;
-}
-
-char *itoa(char *a,int i, int r)
-{
-  if ((r < 2) || (r > 36))
-    r = 10;
-  if (i < 0) {
-    *a = '-';
-    *i2a(-(unsigned) i, a + 1, r) = 0;
-  } else
-    *i2a(i, a, r) = 0;
-
-  return a;
-}
 
 unsigned char ESP8266_sendCommand(char* command, int timeout);
 
@@ -134,6 +115,8 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
   return ESP8266_sendCommand("AT+CIPCLOSE\r\n", 5000);
 }
 
+
+
 // timeout in ms
 unsigned char ESP8266_sendCommand(char* command, int timeout) {
   USART2_PutString(command);
@@ -143,6 +126,8 @@ unsigned char ESP8266_sendCommand(char* command, int timeout) {
   return ESP8266_waitForOK(timeout);
 
 }
+
+
 
 
 unsigned char ESP8266_waitForOK(int timeout) {
