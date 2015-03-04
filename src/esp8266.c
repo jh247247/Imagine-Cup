@@ -65,9 +65,11 @@ unsigned char ESP8266_setupServer(char multi, unsigned int port) {
   return ESP8266_sendCommand("\"\r\n",500);
 }
 
-unsigned char ESP8266_sendServerData(char* data, int length) {
+unsigned char ESP8266_sendServerData(char channel, char* data, int length) {
   char buf[32];
   USART2_PutString("AT+CIPSEND=");
+  USART2_PutChar(channel);
+  USART2_PutChar(',');
   // assume only single connection mode
   itoa(buf, length,10);
   USART2_PutString(buf);
@@ -75,7 +77,12 @@ unsigned char ESP8266_sendServerData(char* data, int length) {
   if(!ESP8266_waitForPacketStart(5000)) {
     return 0;
   }
+
   USART2_PutString(data);
+  USART2_PutString("AT+CIPCLOSE=");
+  USART2_PutChar(channel);
+  ESP8266_sendCommand("\r\n", 5000);
+
   return 1;
 }
 
@@ -93,7 +100,7 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
   if(!ESP8266_sendCommand("\r\n",5000)) {
     // module timed out, send close just in case
     ESP8266_sendCommand("AT+CIPCLOSE\r\n", 0);
-    return 0;
+    return -1;
   }
 
   // assume that the data is not null terminated,
@@ -103,14 +110,14 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
   USART2_PutString("\r\n");
   if(!ESP8266_waitForPacketStart(5000)) {
     ESP8266_sendCommand("AT+CIPCLOSE\r\n", 0);
-    return 0;
+    return -2;
   }
   for(i = 0; i < length; i++) {
     USART2_PutChar(data[i]);
   }
   if(!ESP8266_sendCommand("\r\n",5000)) {
     ESP8266_sendCommand("AT+CIPCLOSE\r\n", 0);
-    return 0;
+    return -3;
   }
   return ESP8266_sendCommand("AT+CIPCLOSE\r\n", 5000);
 }

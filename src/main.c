@@ -148,6 +148,8 @@ int main(int argc, char *argv[])
 
   IN_init();
 
+  USART_resetRXBuffer(1);
+  USART_resetRXBuffer(0);
 
   while(1) {
     IN_handleServer();

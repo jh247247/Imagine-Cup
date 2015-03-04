@@ -13,12 +13,11 @@
 
 #include "string.h"
 
-#define USART_BUF_LEN 50
-#define USART_AMOUNT 2
+
 
 // rx buffer so we don't really need timeouts anymore.
-/* volatile char g_usart_rx[USART_AMOUNT][USART_BUF_LEN]; */
-/* volatile int g_usart_rx_index[USART_AMOUNT]; */
+volatile char g_usart_rx[USART_AMOUNT][USART_BUF_LEN];
+volatile int g_usart_rx_index[USART_AMOUNT];
 
 // match stuff so we can be on the lookout for specific strings.
 char g_usart_rx_match[USART_AMOUNT][USART_BUF_LEN]; // store the string we are
@@ -126,6 +125,11 @@ int USART_checkMatch(int usart) {
   return g_usart_rx_match_index[usart] - g_usart_rx_match_length[usart];
 }
 
+void USART_resetRXBuffer(int usart) {
+  memset((char*)g_usart_rx[usart], 0, USART_BUF_LEN);
+  g_usart_rx_index[usart] = 0;
+}
+
 void USART1_PutChar(char ch)
 {
   while(!(USART1->SR & USART_SR_TXE));
@@ -179,10 +183,12 @@ unsigned char USART_waitForString(USART_TypeDef* USARTx, char* ref, int timeout)
 
 void USART_rxCheck(int usart, char rx) {
   /* // add to the buffer */
-  /* if(g_usart_rx_index[usart] < USART_BUF_LEN) { */
-  /*   g_usart_rx[usart][g_usart_rx_index[usart]] = rx; */
-  /*   g_usart_rx_index[usart]++; */
-  /* } */
+  if(g_usart_rx_index[usart] < USART_BUF_LEN) {
+    g_usart_rx[usart][g_usart_rx_index[usart]] = rx;
+    g_usart_rx_index[usart]++;
+  }
+
+  USART1_PutChar(rx);
 
   if(g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
     g_usart_rx_match_index[usart]++;

@@ -14,7 +14,7 @@ unsigned char ESP8266_waitForPacketStart(int timeout);
 
 unsigned char ESP8266_setCIPMUX(int val);
 unsigned char ESP8266_setupServer(char en, unsigned int port);
-unsigned char ESP8266_sendServerData(char* data, int length);
+unsigned char ESP8266_sendServerData(char channel, char* data, int length);
 
 char *itoa(char *a,int i, int r);
 #endif /* ESP8266_H */

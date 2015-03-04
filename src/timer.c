@@ -12,7 +12,7 @@ int TIM_init(){
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
   TIM_TimeBaseInitTypeDef timerInitStructure;
-  timerInitStructure.TIM_Prescaler = SystemCoreClock/192000;
+  timerInitStructure.TIM_Prescaler = SystemCoreClock/44000;
   timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
   timerInitStructure.TIM_Period = 1;
   timerInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
@@ -45,4 +45,15 @@ void TIM2_IRQHandler()
       g_adcFlag = 1;
       g_sysTick++;
     }
+}
+
+// use these for things that are not guaranteed, like some modules
+// don't always reply
+unsigned int timeout_temp;
+void TIM_initTimeout(int timeout) {
+  g_sysTick = 0;
+  timeout_temp = timeout;
+}
+int TIM_checkTimeout() {
+  return !(g_sysTick < timeout_temp);
 }
