@@ -13,7 +13,8 @@
 
 #include "string.h"
 
-
+// good enough for 2 ports.
+#define USART2PORT(x) (x==USART2)
 
 // rx buffer so we don't really need timeouts anymore.
 volatile char g_usart_rx[USART_AMOUNT][USART_BUF_LEN];
@@ -109,71 +110,51 @@ void USART12_Init(void)
 }
 
 
-void USART_setMatch(int usart, char* str) {
-  strcpy(g_usart_rx_match[usart], str);
-  g_usart_rx_match_length[usart] = strlen(str);
-  g_usart_rx_match_index[usart] = 0; // reset index so that we restart
+void USART_setMatch(USART_TypeDef* USARTx, char* str) {
+  int port = USART2PORT(USARTx);
+  strcpy(g_usart_rx_match[port], str);
+  g_usart_rx_match_length[port] = strlen(str);
+  g_usart_rx_match_index[port] = 0; // reset index so that we restart
   // the state machine
 }
 
 // reset matches index
-void USART_resetMatch(int usart) {
-  g_usart_rx_match_index[usart] = 0;
+void USART_resetMatch(USART_TypeDef* USARTx) {
+  g_usart_rx_match_index[USART2PORT(USARTx)] = 0;
 }
 
-int USART_checkMatch(int usart) {
-  return g_usart_rx_match_index[usart] - g_usart_rx_match_length[usart];
+int USART_checkMatch(USART_TypeDef* USARTx) {
+  int port = USART2PORT(USARTx);
+  return g_usart_rx_match_index[port] - g_usart_rx_match_length[port];
 }
 
-void USART_resetRXBuffer(int usart) {
-  memset((char*)g_usart_rx[usart], 0, USART_BUF_LEN);
-  g_usart_rx_index[usart] = 0;
+void USART_resetRXBuffer(USART_TypeDef* USARTx) {
+  int port = USART2PORT(USARTx);
+  memset((char*)g_usart_rx[port], 0, USART_BUF_LEN);
+  g_usart_rx_index[port] = 0;
 }
 
-void USART1_PutChar(char ch)
+void USART_PutChar(USART_TypeDef* USARTx, char ch)
 {
-  while(!(USART1->SR & USART_SR_TXE));
-  USART1->DR = ch;
+  while(!(USARTx->SR & USART_SR_TXE));
+  USARTx->DR = ch;
 }
 
-void USART1_PutString(char * str)
+void USART_PutString(USART_TypeDef* USARTx, char * str)
 {
   while(*str != 0)
     {
-      USART1_PutChar(*str);
+      USART_PutChar(USARTx, *str);
       str++;
     }
 }
 
-void USART2_PutChar(char ch)
-{
-  while(!(USART2->SR & USART_SR_TXE));
-  USART2->DR = ch;
-}
-
-void USART2_PutString(char * str)
-{
-  while(*str != 0)
-    {
-      USART2_PutChar(*str);
-      str++;
-    }
-}
 
 unsigned char USART_waitForString(USART_TypeDef* USARTx, char* ref, int timeout) {
-  int port;
-
-  // HACK, fixme
-  if(USARTx == USART1) {
-    port = 0;
-  } else {
-    port = 1;
-  }
-
   g_sysTick = 0;
-  USART_setMatch(port, ref);
+  USART_setMatch(USARTx, ref);
   while(g_sysTick < timeout) {
-    if(USART_checkMatch(port) == 0) {
+    if(USART_checkMatch(USARTx) == 0) {
       return 1;
     }
   }
@@ -187,8 +168,6 @@ void USART_rxCheck(int usart, char rx) {
     g_usart_rx[usart][g_usart_rx_index[usart]] = rx;
     g_usart_rx_index[usart]++;
   }
-
-  USART1_PutChar(rx);
 
   if(g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
     g_usart_rx_match_index[usart]++;

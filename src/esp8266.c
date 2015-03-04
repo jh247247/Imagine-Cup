@@ -12,7 +12,7 @@
 unsigned char ESP8266_sendCommand(char* command, int timeout);
 
 unsigned char ESP8266_init(void) {
-  USART2_PutString("AT+RST\r\n");
+  USART_PutString(ESP8266_USART,"AT+RST\r\n");
   ESP8266_waitForReady(5000);
   if(ESP8266_test()) {
     ESP8266_sendCommand("ATE0\r\n",100); // disable echo back
@@ -29,10 +29,10 @@ unsigned char ESP8266_test(void) {
 }
 
 unsigned char ESP8266_connect(char* ssid, char* pass) {
-  USART2_PutString("AT+CWJAP=\"");
-  USART2_PutString(ssid);
-  USART2_PutString("\",\"");
-  USART2_PutString(pass);
+  USART_PutString(ESP8266_USART,"AT+CWJAP=\"");
+  USART_PutString(ESP8266_USART,ssid);
+  USART_PutString(ESP8266_USART,"\",\"");
+  USART_PutString(ESP8266_USART,pass);
   return ESP8266_sendCommand("\"\r\n",20000);
 }
 
@@ -41,11 +41,11 @@ unsigned char ESP8266_isConnected(void) {
 }
 
 unsigned char ESP8266_setCIPMUX(int val) {
-  USART2_PutString("AT+CIPMUX=");
+  USART_PutString(ESP8266_USART,"AT+CIPMUX=");
   if(val) {
-    USART2_PutChar('1');
+    USART_PutChar(ESP8266_USART,'1');
   } else {
-    USART2_PutChar('0');
+    USART_PutChar(ESP8266_USART,'0');
   }
   return ESP8266_sendCommand("\"\r\n",500);
 }
@@ -53,34 +53,34 @@ unsigned char ESP8266_setCIPMUX(int val) {
 unsigned char ESP8266_setupServer(char multi, unsigned int port) {
   char buf[6];
 
-  USART2_PutString("AT+CIPSERVER=");
+  USART_PutString(ESP8266_USART,"AT+CIPSERVER=");
   if(multi) {
-    USART2_PutChar('1');
+    USART_PutChar(ESP8266_USART,'1');
   } else {
-    USART2_PutChar('0');
+    USART_PutChar(ESP8266_USART,'0');
   }
-  USART2_PutChar(',');
+  USART_PutChar(ESP8266_USART,',');
   itoa(buf,port,10);
-  USART2_PutString(buf);
+  USART_PutString(ESP8266_USART,buf);
   return ESP8266_sendCommand("\"\r\n",500);
 }
 
 unsigned char ESP8266_sendServerData(char channel, char* data, int length) {
   char buf[32];
-  USART2_PutString("AT+CIPSEND=");
-  USART2_PutChar(channel);
-  USART2_PutChar(',');
+  USART_PutString(ESP8266_USART,"AT+CIPSEND=");
+  USART_PutChar(ESP8266_USART,channel);
+  USART_PutChar(ESP8266_USART,',');
   // assume only single connection mode
   itoa(buf, length,10);
-  USART2_PutString(buf);
-  USART2_PutString("\r\n");
+  USART_PutString(ESP8266_USART,buf);
+  USART_PutString(ESP8266_USART,"\r\n");
   if(!ESP8266_waitForPacketStart(5000)) {
     return 0;
   }
 
-  USART2_PutString(data);
-  USART2_PutString("AT+CIPCLOSE=");
-  USART2_PutChar(channel);
+  USART_PutString(ESP8266_USART,data);
+  USART_PutString(ESP8266_USART,"AT+CIPCLOSE=");
+  USART_PutChar(ESP8266_USART,channel);
   ESP8266_sendCommand("\r\n", 5000);
 
   return 1;
@@ -91,12 +91,12 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
   char buf[6];
   int i;
   // start session
-  USART2_PutString("AT+CIPSTART=\"");
-  USART2_PutString(type);
-  USART2_PutString("\",\"");
-  USART2_PutString(ip);
-  USART2_PutString("\",");
-  USART2_PutString(port);
+  USART_PutString(ESP8266_USART,"AT+CIPSTART=\"");
+  USART_PutString(ESP8266_USART,type);
+  USART_PutString(ESP8266_USART,"\",\"");
+  USART_PutString(ESP8266_USART,ip);
+  USART_PutString(ESP8266_USART,"\",");
+  USART_PutString(ESP8266_USART,port);
   if(!ESP8266_sendCommand("\r\n",5000)) {
     // module timed out, send close just in case
     ESP8266_sendCommand("AT+CIPCLOSE\r\n", 0);
@@ -105,15 +105,15 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
 
   // assume that the data is not null terminated,
   itoa(buf,length,10);
-  USART2_PutString("AT+CIPSEND=");
-  USART2_PutString(buf);
-  USART2_PutString("\r\n");
+  USART_PutString(ESP8266_USART,"AT+CIPSEND=");
+  USART_PutString(ESP8266_USART,buf);
+  USART_PutString(ESP8266_USART,"\r\n");
   if(!ESP8266_waitForPacketStart(5000)) {
     ESP8266_sendCommand("AT+CIPCLOSE\r\n", 0);
     return -2;
   }
   for(i = 0; i < length; i++) {
-    USART2_PutChar(data[i]);
+    USART_PutChar(ESP8266_USART,data[i]);
   }
   if(!ESP8266_sendCommand("\r\n",5000)) {
     ESP8266_sendCommand("AT+CIPCLOSE\r\n", 0);
@@ -126,7 +126,7 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
 
 // timeout in ms
 unsigned char ESP8266_sendCommand(char* command, int timeout) {
-  USART2_PutString(command);
+  USART_PutString(ESP8266_USART,command);
 
   // start checking for timeout
   // this may have to be a bit smarter in the end
@@ -138,14 +138,14 @@ unsigned char ESP8266_sendCommand(char* command, int timeout) {
 
 
 unsigned char ESP8266_waitForOK(int timeout) {
-  return USART_waitForString(USART2, "OK", timeout*sysTicksPerMillisecond);
+  return USART_waitForString(ESP8266_USART, "OK", timeout*sysTicksPerMillisecond);
 }
 
 
 unsigned char ESP8266_waitForReady(int timeout) {
-  return USART_waitForString(USART2, "ready", timeout*sysTicksPerMillisecond);
+  return USART_waitForString(ESP8266_USART, "ready", timeout*sysTicksPerMillisecond);
 }
 
 unsigned char ESP8266_waitForPacketStart(int timeout) {
-  return USART_waitForString(USART2, ">", timeout*sysTicksPerMillisecond);
+  return USART_waitForString(ESP8266_USART, ">", timeout*sysTicksPerMillisecond);
 }

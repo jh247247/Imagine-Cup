@@ -148,8 +148,8 @@ int main(int argc, char *argv[])
 
   IN_init();
 
-  USART_resetRXBuffer(1);
-  USART_resetRXBuffer(0);
+  USART_resetRXBuffer(ESP8266_USART);
+  USART_resetRXBuffer(HOST_USART);
 
   while(1) {
     IN_handleServer();
