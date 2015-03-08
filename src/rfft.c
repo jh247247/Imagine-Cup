@@ -16,7 +16,7 @@
  * 849-863.  Adapted to C by Bill Simpson, 1995  wsimpson@uwinnipeg.ca       *
  ****************************************************************************/
 
-void rfft(int X[],int N)
+void rfft(float X[],int N)
 {
   int I,I0,I1,I2,I3,I4,I5,I6,I7,I8, IS,ID;
   int J,K,M,N2,N4,N8;

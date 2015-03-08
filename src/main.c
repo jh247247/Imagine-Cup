@@ -87,6 +87,23 @@ unsigned int readADC1(unsigned char channel)
   return ADC_GetConversionValue(ADC1);
 }
 
+int max_array(float a[], int num_elements, int *index)
+{
+  int i;
+  float max=-32000;
+  for (i=0; i<num_elements; i++)
+    {
+      if (a[i]>max)
+        {
+          max=a[i];
+        }
+    }
+  if(index != NULL) {
+    *index = i;
+  }
+  
+  return(max);
+}
 
 
 void clock_init(){
@@ -123,22 +140,26 @@ void clock_init(){
    */
 }
 
-int fix_fftr(short f[], int m, int inverse);
+void rfft(float X[],int N);
 
 // has to be a power of 2, otherwise you get a hang.
 #define FFT_LEN 512
-#define LOG2FFT 9
 
-#define AVG 5
+/* TODO: whenever we take a background fft, take the maximum value of
+   the range that we want and use that as the threshold for "seeing" a
+   phone. Might actually need to fudge it to take into account the
+   noise of a room.*/
+
 int main(int argc, char *argv[])
 {
   int i = 0;
-  int cnt = 0;
+  int maxfft = 0;
 
-  short fft[FFT_LEN];
-  short avgfft[FFT_LEN];
+  float fft[FFT_LEN];
+  //short backgroundfft[FFT_LEN]; // need to have a background fft for
+  // noise reasons
 
-  //char buf[32];
+  char buf[32];
 
   clock_init();
   ADC_Configuration();
@@ -162,34 +183,27 @@ int main(int argc, char *argv[])
 
     if(i >= FFT_LEN) {
       TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
-
-
-      fix_fftr(fft,LOG2FFT+1,0);
-      for(i = 0; i < FFT_LEN; i++) {
-        avgfft[i] += fft[i]/AVG;
-      }
-      cnt++;
+      USART_PutChar(HOST_USART, 'a');
+      /* TODO: Add flags from server for taking background noise fft */
+      //fix_fftr(fft,LOG2FFT+1,0);
+      rfft(fft, FFT_LEN);
+      USART_PutChar(HOST_USART, 'b');
+      
+      max_array(fft+1,FFT_LEN/2-1, &maxfft);
+      memset(buf, 0, 32);
+      itoa(buf,maxfft,10);
+      itoa(buf+10,(int)fft[maxfft],10);
+      USART_PutChar(HOST_USART, 'c');
+      ESP8266_sendPacket("UDP", "192.168.1.10", "50042",
+                                       buf,32);
+      USART_PutChar(HOST_USART, 'd');
+      USART_PutChar(HOST_USART, '\n');
       i = 0;
+      
       TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
     }
 
-    if(cnt == AVG) {
-      for(i = 0; i < FFT_LEN; i++) {
-        /* if(i < FFT_LEN/2) { */
-        /*   itoa(buf,avgfft[i],10); */
-        /*   USART1_PutString(buf); */
-        /*   if(i < FFT_LEN/2-1) { */
-        /*     USART1_PutChar(','); */
-        /*   } */
-        /* } */
-
-
-        avgfft[i] = 0;
-      }
-      //USART1_PutChar('\0');
-
-      cnt = 0;
-    }
+    /* TODO: find out if the  */
 
     asm("wfe");
   }

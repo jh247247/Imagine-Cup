@@ -3,7 +3,7 @@ include ../Makefile.common
 OBJS+=startup.o
 OBJS+=main.o
 OBJS+=lcd_control.o
-OBJS+=fix-fft.o
+OBJS+=rfft.o
 OBJS+=usart.o
 OBJS+=timer.o
 OBJS+=esp8266.o

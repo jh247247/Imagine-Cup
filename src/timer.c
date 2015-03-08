@@ -57,3 +57,8 @@ void TIM_initTimeout(int timeout) {
 int TIM_checkTimeout() {
   return !(g_sysTick < timeout_temp);
 }
+
+void TIM_delay(int timeout) {
+  TIM_initTimeout(timeout);
+  while(!TIM_checkTimeout());
+}
