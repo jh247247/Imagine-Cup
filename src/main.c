@@ -23,6 +23,7 @@
 #include "esp8266.h"
 #include "ImagineNode.h"
 #include <string.h>
+#include <stdlib.h>
 
 void ADC_Configuration(void)
 {
@@ -145,17 +146,22 @@ void rfft(float X[],int N);
 // has to be a power of 2, otherwise you get a hang.
 #define FFT_LEN 512
 
-/* TODO: whenever we take a background fft, take the maximum value of
-   the range that we want and use that as the threshold for "seeing" a
-   phone. Might actually need to fudge it to take into account the
-   noise of a room.*/
+// threshold between the current fft and the previous fft before we
+// send a signal. (should really only be the frequency we want, but
+// what to do right now.)
+#define FFT_THRESHOLD 100 
+
+// amount of fft buffers to keep.
+#define FFT_AMOUNT 2
+#define FFT_NEXT(curr) (!curr) //keep things simple
 
 int main(int argc, char *argv[])
 {
   int i = 0;
   int maxfft = 0;
+  int currFFT = 0;
 
-  float fft[FFT_LEN];
+  float fft[2][FFT_LEN];
   //short backgroundfft[FFT_LEN]; // need to have a background fft for
   // noise reasons
 
@@ -176,30 +182,35 @@ int main(int argc, char *argv[])
     IN_handleServer();
 
     if(g_adcFlag == 1) {
-      fft[i] = readADC1(ADC_Channel_8);
+      fft[currFFT][i] = readADC1(ADC_Channel_8);
       i++;
       g_adcFlag = 0;
     }
 
     if(i >= FFT_LEN) {
-      TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
-      USART_PutChar(HOST_USART, 'a');
-      /* TODO: Add flags from server for taking background noise fft */
-      //fix_fftr(fft,LOG2FFT+1,0);
-      rfft(fft, FFT_LEN);
-      USART_PutChar(HOST_USART, 'b');
+      TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE); // disable
+      // interrupts so we don't have to worry.
+      rfft(fft[currFFT], FFT_LEN); // actually do the fft.
+      fft[currFFT][1] = 0; // for some reason, DC is at element 1...
+
+      for(i = 0; i < FFT_LEN/2; i++) {
+	fft[FFT_NEXT(currFFT)][i] -= fft[currFFT][i];
+	itoa(buf, (int)fft[FFT_NEXT(currFFT)][i], 10);
+	USART_PutString(HOST_USART,buf);
+	if(i < FFT_LEN/2-1) {
+	  USART_PutChar(HOST_USART, ',');
+	}
+      }
+      USART_PutChar(HOST_USART, '\0');
       
-      max_array(fft+1,FFT_LEN/2-1, &maxfft);
+      max_array(fft[currFFT]+1,, &maxfft);
       memset(buf, 0, 32);
       itoa(buf,maxfft,10);
       itoa(buf+10,(int)fft[maxfft],10);
-      USART_PutChar(HOST_USART, 'c');
       ESP8266_sendPacket("UDP", "192.168.1.10", "50042",
                                        buf,32);
-      USART_PutChar(HOST_USART, 'd');
-      USART_PutChar(HOST_USART, '\n');
       i = 0;
-      
+      currFFT = FFT_NEXT(currFFT); // might need to be cleaner at some point...
       TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
     }
 

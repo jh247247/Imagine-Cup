@@ -109,6 +109,21 @@ void USART12_Init(void)
   NVIC_Init(&n);
 }
 
+void USART_SetBaudRate(USART_TypeDef* USARTx, int baud) {
+  /* USART configuration structure for USART */
+  USART_InitTypeDef usart_init;
+
+  usart_init.USART_BaudRate = baud;
+  usart_init.USART_WordLength = USART_WordLength_8b;
+  usart_init.USART_StopBits = USART_StopBits_1;
+  usart_init.USART_Parity = USART_Parity_No ;
+  usart_init.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+  usart_init.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  /* Configure USART */
+  USART_Init(USARTx, &usart_init);
+  /* Enable USART*/
+  USART_Cmd(USARTx, ENABLE);
+}
 
 void USART_setMatch(USART_TypeDef* USARTx, char* str) {
   int port = USART2PORT(USARTx);

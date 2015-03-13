@@ -38,7 +38,7 @@
   the case in your architecture, please replace "short"
   with a type definition which *is* a 16-bit word.
 */
-
+#include "usart.h"
 /*
   Since we only use 3/4 of N_WAVE, we define only
   this many samples, in order to conserve data space.
@@ -260,12 +260,15 @@ int fix_fft(short fr[], short fi[], short m, short inverse)
         fr[i] = qr + tr;
         fi[i] = qi + ti;
       }
+      USART_PutChar(HOST_USART, 'b');
     }
     --k;
     l = istep;
   }
   return scale;
 }
+
+
 
 /*
   fix_fftr() - forward/inverse FFT on array of real numbers.
@@ -289,6 +292,7 @@ int fix_fftr(short f[], int m, int inverse)
   if (inverse)
     scale = fix_fft(fi, fr, m-1, inverse);
   for (i=1; i<N; i+=2) {
+    USART_PutChar(HOST_USART, 'a');
     tt = f[N+i-1];
     f[N+i-1] = f[i];
     f[i] = tt;

@@ -7,12 +7,14 @@
 #include "util.h"
 
 #define ESP8266_LONG_TIMEOUT 500
-#define ESP8266_SHORT_TIMEOUT 50
+#define ESP8266_SHORT_TIMEOUT 10
 
 int cipmux;
 
 
 unsigned char ESP8266_sendCommand(char* command, int timeout);
+
+/* TODO: Baud rate change for faster comms.  */
 
 unsigned char ESP8266_init(void) {
   TIM_delay(44000);
@@ -28,6 +30,7 @@ unsigned char ESP8266_init(void) {
     return 1;
   }
   cipmux = 0;
+
   return 0;
 }
 

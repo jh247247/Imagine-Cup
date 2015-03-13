@@ -15,6 +15,7 @@ extern volatile int g_usart_rx_index[USART_AMOUNT];
 
 
 void USART12_Init(void);
+void USART_SetBaudRate(USART_TypeDef* USARTx, int baud);
 void USART_PutChar(USART_TypeDef* USARTx, char ch);
 void USART_PutString(USART_TypeDef* USARTx, char * str);
 unsigned char USART_waitForString(USART_TypeDef* USARTx, char* ref,
