@@ -97,7 +97,7 @@ void USART12_Init(void)
   // USART2 setup
 
   // esp8266 expects this.
-  usart1_init_struct.USART_BaudRate = 9600;
+  usart1_init_struct.USART_BaudRate = 9600/4;
 
   USART_Init(USART2, &usart1_init_struct);
   USART_Cmd(USART2, ENABLE);

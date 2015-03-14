@@ -102,8 +102,17 @@ int max_array(float a[], int num_elements, int *index)
   if(index != NULL) {
     *index = i;
   }
-  
+
   return(max);
+}
+
+int average(float a[], int n) {
+  long long int sum = 0;
+  int m = n;
+  for(; m > 0; m-- ) {
+    sum += a[m];
+  }
+  return sum/n;
 }
 
 
@@ -141,27 +150,28 @@ void clock_init(){
    */
 }
 
-void rfft(float X[],int N);
-
 // has to be a power of 2, otherwise you get a hang.
-#define FFT_LEN 512
+#define FFT_LEN 2048
 
 // threshold between the current fft and the previous fft before we
 // send a signal. (should really only be the frequency we want, but
 // what to do right now.)
-#define FFT_THRESHOLD 100 
+#define FFT_THRESHOLD 5000
+#define NOISE_THRESHOLD 2500
 
-// amount of fft buffers to keep.
-#define FFT_AMOUNT 2
-#define FFT_NEXT(curr) (!curr) //keep things simple
+#define NOISE_SAMPLE_OFFSET 600
+#define NOISE_SAMPLE_LENGTH 200
+
+#define FFT_SAMPLE_OFFSET 920
+#define FFT_SAMPLE_LENGTH 20
 
 int main(int argc, char *argv[])
 {
   int i = 0;
-  int maxfft = 0;
-  int currFFT = 0;
+  //int maxfft = 0;
+  int afft = 0;
 
-  float fft[2][FFT_LEN];
+  float fft[FFT_LEN];
   //short backgroundfft[FFT_LEN]; // need to have a background fft for
   // noise reasons
 
@@ -182,7 +192,7 @@ int main(int argc, char *argv[])
     IN_handleServer();
 
     if(g_adcFlag == 1) {
-      fft[currFFT][i] = readADC1(ADC_Channel_8);
+      fft[i] = readADC1(ADC_Channel_8);
       i++;
       g_adcFlag = 0;
     }
@@ -190,31 +200,48 @@ int main(int argc, char *argv[])
     if(i >= FFT_LEN) {
       TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE); // disable
       // interrupts so we don't have to worry.
-      rfft(fft[currFFT], FFT_LEN); // actually do the fft.
-      fft[currFFT][1] = 0; // for some reason, DC is at element 1...
+      rfft(fft, FFT_LEN); // actually do the fft.
+      fft[1] = 0; // for some reason, DC is at element 1...
 
-      for(i = 0; i < FFT_LEN/2; i++) {
-	fft[FFT_NEXT(currFFT)][i] -= fft[currFFT][i];
-	itoa(buf, (int)fft[FFT_NEXT(currFFT)][i], 10);
-	USART_PutString(HOST_USART,buf);
-	if(i < FFT_LEN/2-1) {
-	  USART_PutChar(HOST_USART, ',');
-	}
+      for(i = 1; i < FFT_LEN/2; i++) {
+        fft[i] = abs((int)fft[i]);
+      }
+
+      /* find out useless samples and dump them. AVG 600-800 and
+         use threshold filtering*/
+      afft = average(fft+NOISE_SAMPLE_OFFSET, NOISE_SAMPLE_LENGTH);
+      if(afft > NOISE_THRESHOLD) {
+	i = 0;
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+        continue;
+      }
+      
+      for(i = 1; i < FFT_LEN/2; i++) {
+        itoa(buf, (int)fft[i], 10);
+        USART_PutString(HOST_USART,buf);
+        if(i < FFT_LEN/2-1) {
+          USART_PutChar(HOST_USART, ',');
+        }
       }
       USART_PutChar(HOST_USART, '\0');
       
-      max_array(fft[currFFT]+1,, &maxfft);
-      memset(buf, 0, 32);
-      itoa(buf,maxfft,10);
-      itoa(buf+10,(int)fft[maxfft],10);
-      ESP8266_sendPacket("UDP", "192.168.1.10", "50042",
-                                       buf,32);
+      /* TODO: Localize search for fft peak. Same thing but at 920-940
+         and send packet if max is greater than average by some
+         threshold.*/
+      if(max_array(fft+FFT_SAMPLE_OFFSET, FFT_SAMPLE_LENGTH, NULL) -
+         average(fft+FFT_SAMPLE_OFFSET, FFT_SAMPLE_LENGTH) >
+         FFT_THRESHOLD)  {
+        buf[0] = 100;
+        buf[1] = '\0';
+        ESP8266_sendPacket("UDP", "192.168.1.10", "50042",
+                           buf,32);
+      }
+
+
       i = 0;
-      currFFT = FFT_NEXT(currFFT); // might need to be cleaner at some point...
       TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
     }
 
-    /* TODO: find out if the  */
 
     asm("wfe");
   }
