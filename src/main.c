@@ -225,13 +225,15 @@ int main(int argc, char *argv[])
       }
       USART_PutChar(HOST_USART, '\0');
       
-      /* TODO: Localize search for fft peak. Same thing but at 920-940
+      /* Local search for fft peak. Same thing but at 920-940
          and send packet if max is greater than average by some
          threshold.*/
       if(max_array(fft+FFT_SAMPLE_OFFSET, FFT_SAMPLE_LENGTH, NULL) -
          average(fft+FFT_SAMPLE_OFFSET, FFT_SAMPLE_LENGTH) >
          FFT_THRESHOLD)  {
-        buf[0] = 100;
+	// we should probably send some kind of intensity and freq
+	// stuff as well I guess
+        buf[0] = '1';
         buf[1] = '\0';
         ESP8266_sendPacket("UDP", "192.168.1.10", "50042",
                            buf,32);
