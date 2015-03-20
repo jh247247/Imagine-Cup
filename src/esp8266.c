@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include "util.h"
 
-#define ESP8266_LONG_TIMEOUT 500
-#define ESP8266_SHORT_TIMEOUT 10
+#define ESP8266_LONG_TIMEOUT 20000
+#define ESP8266_SHORT_TIMEOUT 500
 
 int cipmux;
 
@@ -84,19 +84,20 @@ unsigned char ESP8266_sendServerData(char channel, char* data, int length) {
   USART_PutChar(ESP8266_USART,channel);
   USART_PutChar(ESP8266_USART,',');
   // assume only single connection mode
-  itoa(buf, length,10);
+  itoa(buf, length, 10);
   USART_PutString(ESP8266_USART,buf);
   USART_PutString(ESP8266_USART,"\r\n");
   if(!ESP8266_waitForPacketStart(ESP8266_LONG_TIMEOUT)) {
-    return 0;
+    USART_PutString(HOST_USART, "Send fail!");
+    return -1;
   }
 
   USART_PutString(ESP8266_USART,data);
   USART_PutString(ESP8266_USART,"AT+CIPCLOSE=");
   USART_PutChar(ESP8266_USART,channel);
   ESP8266_sendCommand("\r\n", ESP8266_SHORT_TIMEOUT);
-
-  return 1;
+  USART_PutString(HOST_USART, "Send success!");
+  return 0;
 }
 
 unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,

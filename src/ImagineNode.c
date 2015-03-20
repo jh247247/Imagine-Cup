@@ -4,6 +4,7 @@
 #include "timer.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 // cannot get unique id from esp8266, use internal cpu id.
 unsigned long *id = (unsigned long*) 0x1FFFF7E8;
@@ -55,6 +56,7 @@ void IN_handleServer() {
 
   // check if we are pinged by the server
   if(USART_checkMatch(ESP8266_USART) == 0) {
+    USART_PutString(HOST_USART,"Packet received!\n");
 
     // packet formatting...
     // byte 11 is start of packet data
@@ -80,10 +82,11 @@ void IN_handleServer() {
     // data starts after the colon
     switch(*(strstr(packetStart,":")+1)) {
     case '0':
+      USART_PutString(HOST_USART,"Sending id to server...\n");
       message[0] = '0';
-      itoa((message+1), *id, 16);
+      memcpy(&(message[1]), (void*) 0x1FFFF7E8, 12); // 12 bit id copy
       // char 5 is the channel id
-      ESP8266_sendServerData(*(packetStart+5), message, strlen(message));
+      ESP8266_sendServerData(*(packetStart+5), message, 13);
       break;
       // using switch case to make responding to server messages easier
     default:
@@ -91,7 +94,6 @@ void IN_handleServer() {
     }
 
     USART_resetMatch(ESP8266_USART);
-    USART_resetRXBuffer(ESP8266_USART);
   }
 
   // host sending config

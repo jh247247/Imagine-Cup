@@ -124,12 +124,12 @@ void clock_init(){
   /*000 Zero wait state, if 0  MHz < SYSCLK <= 24 MHz
     001 One wait state, if  24 MHz < SYSCLK <= 48 MHz
     010 Two wait states, if 48 MHz < SYSCLK <= 72 MHz */
-  FLASH_SetLatency(FLASH_Latency_2);
+  FLASH_SetLatency(FLASH_Latency_1);
 
   /* Start with HSI clock (internal 8mhz), divide by 2 and multiply by 9 to
    * get maximum allowed frequency: 36Mhz
    * Enable PLL, wait till it's stable, then select it as system clock*/
-  RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_16);
+  RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_9);
   RCC_PLLCmd(ENABLE);
   while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET) {}
   RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
@@ -215,15 +215,16 @@ int main(int argc, char *argv[])
 	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
         continue;
       }
-      
-      for(i = 1; i < FFT_LEN/2; i++) {
-        itoa(buf, (int)fft[i], 10);
-        USART_PutString(HOST_USART,buf);
-        if(i < FFT_LEN/2-1) {
-          USART_PutChar(HOST_USART, ',');
-        }
-      }
-      USART_PutChar(HOST_USART, '\0');
+
+      // uncomment this if you want to dump to serial port I guess.
+      /* for(i = 1; i < FFT_LEN/2; i++) { */
+      /*   itoa(buf, (int)fft[i], 10); */
+      /*   USART_PutString(HOST_USART,buf); */
+      /*   if(i < FFT_LEN/2-1) { */
+      /*     USART_PutChar(HOST_USART, ','); */
+      /*   } */
+      /* } */
+      /* USART_PutChar(HOST_USART, '\0'); */
       
       /* Local search for fft peak. Same thing but at 920-940
          and send packet if max is greater than average by some
