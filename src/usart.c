@@ -12,6 +12,7 @@
 #include "usart.h"
 
 #include "string.h"
+#include "util.h"
 
 // good enough for 2 ports.
 #define USART2PORT(x) (x==USART2)
@@ -184,9 +185,9 @@ void USART_rxCheck(int usart, char rx) {
     g_usart_rx_index[usart]++;
   }
 
-  //USART_PutChar(HOST_USART, rx);
+  USART_PutChar(HOST_USART, rx);
   
-  if(g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
+  if(rx != '\0' && g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
     g_usart_rx_match_index[usart]++;
   }
 

@@ -16,9 +16,12 @@ char server_ip_addr[17];
 #define ESP8266_PACKET_RX "+IPD"
 #define CONFIG_STR "setup"
 
-#define PACKET_TIMEOUT 44000
+#define PACKET_TIMEOUT 88000
 void IN_init() {
   TIM_delay(4400);
+
+  server_ip_addr[0] = '\0'; // have to init...
+  server_ip_addr[16] = '\0'; // have to init...
   
   // ESP8266 config after init
   USART_PutString(HOST_USART,"### START ###\n");
@@ -71,7 +74,7 @@ void IN_handleServer() {
 
     // wait for data to come in...
     TIM_initTimeout(PACKET_TIMEOUT);
-    while(strstr(packetStart, "\r\n") == NULL && !TIM_checkTimeout());
+    while(strstr(packetStart, "\0") == NULL && !TIM_checkTimeout());
     if(TIM_checkTimeout()) {
       USART_PutString(HOST_USART,"Timeout!");
       USART_resetMatch(ESP8266_USART);
@@ -82,6 +85,15 @@ void IN_handleServer() {
     // data starts after the colon
     switch(*(strstr(packetStart,":")+1)) {
     case '0':
+      // next 16 bytes (max) should by IP addr of server saved as string.
+      USART_PutChar(HOST_USART,'\n');
+      USART_PutString(HOST_USART,(strstr(packetStart,":")+2));
+      USART_PutChar(HOST_USART,'\n');
+      strcpy(server_ip_addr, (strstr(packetStart,":")+2));
+      
+      USART_PutString(HOST_USART,"IP received:");
+      USART_PutString(HOST_USART,server_ip_addr);
+      USART_PutChar(HOST_USART,'\n');
       USART_PutString(HOST_USART,"Sending id to server...\n");
       message[0] = '0';
       memcpy(&(message[1]), (void*) 0x1FFFF7E8, 12); // 12 bit id copy
@@ -100,6 +112,8 @@ void IN_handleServer() {
   if(USART_checkMatch(HOST_USART) == 0) {
     /* TODO:  actually implement this...*/
   }
+  USART_resetMatch(ESP8266_USART);
+  USART_resetMatch(HOST_USART);
 }
 
 int IN_sendToServer(char* message, int len) {

@@ -124,12 +124,12 @@ void clock_init(){
   /*000 Zero wait state, if 0  MHz < SYSCLK <= 24 MHz
     001 One wait state, if  24 MHz < SYSCLK <= 48 MHz
     010 Two wait states, if 48 MHz < SYSCLK <= 72 MHz */
-  FLASH_SetLatency(FLASH_Latency_1);
+  FLASH_SetLatency(FLASH_Latency_2);
 
   /* Start with HSI clock (internal 8mhz), divide by 2 and multiply by 9 to
    * get maximum allowed frequency: 36Mhz
    * Enable PLL, wait till it's stable, then select it as system clock*/
-  RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_9);
+  RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_16);
   RCC_PLLCmd(ENABLE);
   while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET) {}
   RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
@@ -156,7 +156,7 @@ void clock_init(){
 // threshold between the current fft and the previous fft before we
 // send a signal. (should really only be the frequency we want, but
 // what to do right now.)
-#define FFT_THRESHOLD 5000
+#define FFT_THRESHOLD 6000
 #define NOISE_THRESHOLD 2500
 
 #define NOISE_SAMPLE_OFFSET 600
@@ -236,8 +236,13 @@ int main(int argc, char *argv[])
 	// stuff as well I guess
         buf[0] = '1';
         buf[1] = '\0';
-        ESP8266_sendPacket("UDP", "192.168.1.10", "50042",
-                           buf,32);
+
+	USART_PutString(HOST_USART, "Signal detected!");
+
+	if(IN_sendToServer(buf, 2) == -1) {
+	  USART_PutString(HOST_USART, "Node not init'd!\n");
+	  USART_PutString(HOST_USART, "Don't have server IP addr\n");
+	}
       }
 
 
