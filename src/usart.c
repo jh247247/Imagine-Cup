@@ -185,7 +185,7 @@ void USART_rxCheck(int usart, char rx) {
     g_usart_rx_index[usart]++;
   }
 
-  USART_PutChar(HOST_USART, rx);
+  //USART_PutChar(HOST_USART, rx);
   
   if(rx != '\0' && g_usart_rx_match[usart][g_usart_rx_match_index[usart]] == rx) {
     g_usart_rx_match_index[usart]++;
