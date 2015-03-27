@@ -235,13 +235,16 @@ int main(int argc, char *argv[])
 	// we should probably send some kind of intensity and freq
 	// stuff as well I guess
         buf[0] = '1';
-        buf[1] = '\0';
+	itoa(&buf[1],max_array(fft+FFT_SAMPLE_OFFSET,
+			       FFT_SAMPLE_LENGTH, NULL), 10);
 
-	USART_PutString(HOST_USART, "Signal detected!");
-
-	if(IN_sendToServer(buf, 2) == -1) {
+	USART_PutString(HOST_USART, "Signal detected!\n");
+	int ret = IN_sendToServer(buf, strlen(buf));
+	if(ret == 1) {
 	  USART_PutString(HOST_USART, "Node not init'd!\n");
 	  USART_PutString(HOST_USART, "Don't have server IP addr\n");
+	} else if(ret < 0) {
+	  USART_PutString(HOST_USART, "Wifi module error!\n");
 	}
       }
 

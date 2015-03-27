@@ -1,3 +1,4 @@
+#include "ImagineNode.h"
 #include "util.h"
 #include "usart.h"
 #include "esp8266.h"
@@ -17,16 +18,28 @@ char server_ip_addr[17];
 #define CONFIG_STR "setup"
 
 #define PACKET_TIMEOUT 88000
+// TODO: add ssid/pass config
+
+char ESP8266_config_page[] = "<form \
+method=get><label>SSID</label><br><input  type='text' name='ssid' \
+maxlength='30' size='15'><br><label>Password</label><br><input \
+type='password' name='password' maxlength='30' \
+size='15'><br><br><input  type='submit' value='Connect' ></form>";
+
+char ESP8266_config_header[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length:";
+
 void IN_init() {
   TIM_delay(4400);
 
-  server_ip_addr[0] = '\0'; // have to init...
-  server_ip_addr[16] = '\0'; // have to init...
-  
+  // make sure that the ip addr is invalid on startup.
+  server_ip_addr[0] = '\0';
+  server_ip_addr[16] = '\0';
+
   // ESP8266 config after init
   USART_PutString(HOST_USART,"### START ###\n");
 
-  ESP8266_connect("Home&Hosed","143c91ffbf323f9b07439610a4");
+
+  ESP8266_connect("linksys","\0");
   if(ESP8266_isConnected()) {
     USART_PutString(HOST_USART,"ESP8266 Connected!\n");
   } else {
@@ -90,36 +103,43 @@ void IN_handleServer() {
       USART_PutString(HOST_USART,(strstr(packetStart,":")+2));
       USART_PutChar(HOST_USART,'\n');
       strcpy(server_ip_addr, (strstr(packetStart,":")+2));
-      
+
       USART_PutString(HOST_USART,"IP received:");
       USART_PutString(HOST_USART,server_ip_addr);
       USART_PutChar(HOST_USART,'\n');
       USART_PutString(HOST_USART,"Sending id to server...\n");
       message[0] = '0';
-      memcpy(&(message[1]), (void*) 0x1FFFF7E8, 12); // 12 bit id copy
+      message[13] = '\0';
+      memcpy(&(message[1]), (void*) 0x1FFFF7E8, 12); // 12 byte id copy
       // char 5 is the channel id
-      ESP8266_sendServerData(*(packetStart+5), message, 13);
+      //ESP8266_sendServerData(*(packetStart+5), message, 13);
+      // we already have the ip, so no need to actually reply to the
+      // request. force the proper port.
+      IN_sendToServer(message, 14);
+
+      USART_resetMatch(ESP8266_USART);
+      USART_resetRXBuffer(ESP8266_USART);
+
       break;
       // using switch case to make responding to server messages easier
     default:
       break;
     }
 
-    USART_resetMatch(ESP8266_USART);
-  }
 
-  // host sending config
-  if(USART_checkMatch(HOST_USART) == 0) {
-    /* TODO:  actually implement this...*/
+    // host sending config
+    if(USART_checkMatch(HOST_USART) == 0) {
+      /* TODO:  actually implement this...*/
+    }
+    USART_resetMatch(ESP8266_USART);
+    USART_resetMatch(HOST_USART);
   }
-  USART_resetMatch(ESP8266_USART);
-  USART_resetMatch(HOST_USART);
 }
 
 int IN_sendToServer(char* message, int len) {
-  if(strlen(server_ip_addr) == 0) {
+  if(server_ip_addr[0] == '\0') {
     // can't really do much if we don't know where the server lives
-    return -1;
+    return 1;
   }
 
   char buf[32];

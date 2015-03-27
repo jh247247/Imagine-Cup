@@ -22,7 +22,7 @@ unsigned char ESP8266_init(void) {
   USART_PutString(ESP8266_USART,"AT+RST\r\n");
   ESP8266_waitForReady(ESP8266_LONG_TIMEOUT);
   // make sure that we are a client, may want to make mesh network
-  // later on though
+  // later on though 
   ESP8266_sendCommand("AT+CWMODE=1\r\n", ESP8266_SHORT_TIMEOUT);
   if(ESP8266_test()) {
     ESP8266_sendCommand("ATE0\r\n",ESP8266_SHORT_TIMEOUT); // disable echo back
@@ -104,6 +104,11 @@ unsigned char ESP8266_sendPacket(char* type, char* ip, char* port,
                                  char* data, int length) {
   char buf[6];
   int i;
+  USART_PutString(HOST_USART, "Start send packet\n");
+  USART_PutString(HOST_USART, "Sending:");
+  USART_PutString(HOST_USART, data);
+  USART_PutString(HOST_USART, "\n");
+  
   // start session
   USART_PutString(ESP8266_USART,"AT+CIPSTART=");
   if(cipmux) {
