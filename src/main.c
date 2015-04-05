@@ -17,6 +17,7 @@
 #include "lcd_control.h"
 #include "rfft.h"
 #include "math.h"
+#include "util.h"
 
 #include "usart.h"
 #include "timer.h"
@@ -183,13 +184,12 @@ int main(int argc, char *argv[])
   USART12_Init();
   ESP8266_init();
 
-  IN_init();
-
   USART_resetRXBuffer(ESP8266_USART);
   USART_resetRXBuffer(HOST_USART);
 
+  USART_PutString(HOST_USART,"## START ##\n");
+
   while(1) {
-    IN_handleServer();
 
     if(g_adcFlag == 1) {
       fft[i] = readADC1(ADC_Channel_8);
@@ -239,13 +239,7 @@ int main(int argc, char *argv[])
 			       FFT_SAMPLE_LENGTH, NULL), 10);
 
 	USART_PutString(HOST_USART, "Signal detected!\n");
-	int ret = IN_sendToServer(buf, strlen(buf));
-	if(ret == 1) {
-	  USART_PutString(HOST_USART, "Node not init'd!\n");
-	  USART_PutString(HOST_USART, "Don't have server IP addr\n");
-	} else if(ret < 0) {
-	  USART_PutString(HOST_USART, "Wifi module error!\n");
-	}
+	USART_PutString(ESP8266_USART, buf);
       }
 
 

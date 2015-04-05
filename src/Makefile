@@ -7,7 +7,6 @@ OBJS+=rfft.o
 OBJS+=usart.o
 OBJS+=timer.o
 OBJS+=esp8266.o
-OBJS+=ImagineNode.o
 OBJS+=util.o
 
 all: src

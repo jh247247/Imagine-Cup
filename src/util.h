@@ -4,6 +4,6 @@
 
 
 int atoi(const char* endptr);
-/* char *itoa(char *a,int i, int r); */
+char *itoa(char *a,int i, int r);
 
 #endif /* UTIL_H */

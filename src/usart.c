@@ -169,7 +169,7 @@ void USART_PutString(USART_TypeDef* USARTx, char * str)
 unsigned char USART_waitForString(USART_TypeDef* USARTx, char* ref, int timeout) {
   g_sysTick = 0;
   USART_setMatch(USARTx, ref);
-  while(g_sysTick < timeout) {
+  while(g_sysTick < timeout || timeout == 0) {
     if(USART_checkMatch(USARTx) == 0) {
       return 1;
     }
