@@ -260,7 +260,6 @@ int fix_fft(short fr[], short fi[], short m, short inverse)
         fr[i] = qr + tr;
         fi[i] = qi + ti;
       }
-      USART_PutChar(HOST_USART, 'b');
     }
     --k;
     l = istep;
@@ -292,7 +291,6 @@ int fix_fftr(short f[], int m, int inverse)
   if (inverse)
     scale = fix_fft(fi, fr, m-1, inverse);
   for (i=1; i<N; i+=2) {
-    USART_PutChar(HOST_USART, 'a');
     tt = f[N+i-1];
     f[N+i-1] = f[i];
     f[i] = tt;

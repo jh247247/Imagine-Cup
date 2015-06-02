@@ -5,4 +5,4 @@
 make clean
 make
 
-stm32flash -w main.bin -b 115200 -v -g 0x0 /dev/ttyUSB0
+stm32flash -w main.bin -v -g 0x0 /dev/ttyUSB0

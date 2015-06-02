@@ -175,7 +175,7 @@ void clock_init(){
 #define FFT_SNR_OFFSET 895
 #define FFT_SNR_LENGTH 25
 
-#define FFT_SNR 2
+#define FFT_SNR 3
 
 
 #define LED_set() (GPIOA->BRR |= (1<<8))
@@ -198,13 +198,13 @@ int main(int argc, char *argv[])
   TIM_init();
   USART12_Init();
   { // future me is going to hate me.
-  GPIO_InitTypeDef gpio_init_struct;
-  gpio_init_struct.GPIO_Pin = GPIO_Pin_8;
-  gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
-  gpio_init_struct.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_Init(GPIOA, &gpio_init_struct);
+    GPIO_InitTypeDef gpio_init_struct;
+    gpio_init_struct.GPIO_Pin = GPIO_Pin_8;
+    gpio_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
+    gpio_init_struct.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOA, &gpio_init_struct);
   }
-  
+
   LED_set();
   ESP8266_init();
   LED_clear();
@@ -224,8 +224,8 @@ int main(int argc, char *argv[])
 
     if(i >= FFT_LEN) {
       TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE); // disable
-      
-      
+
+
       // interrupts so we don't have to worry.
       rfft(fft, FFT_LEN); // actually do the fft.
       fft[1] = 0; // for some reason, DC is at element 1...
@@ -240,43 +240,44 @@ int main(int argc, char *argv[])
          use threshold filtering*/
       afft = average(fft+NOISE_SAMPLE_OFFSET, NOISE_SAMPLE_LENGTH);
       if(afft > NOISE_THRESHOLD) {
-      	i = 0;
-      	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+        i = 0;
+        TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
         continue;
       }
 
 
       // uncomment this if you want to dump to serial port I guess.
       /* for(i = 1; i < FFT_LEN/2; i++) { */
-      /*   itoa(buf, fft[i], 10); */
-      /*   USART_PutString(HOST_USART,buf); */
-      /*   if(i < FFT_LEN/2-1) { */
-      /*     USART_PutChar(HOST_USART, ','); */
-      /*   } */
+      /*   itoa(buf, (int)fft[i], 10); */
+      /* 	//snprintf(buf, 32, "%d", (int)fft[i]); */
+      /* 	USART_PutString(HOST_USART,buf); */
+      /* 	if(i < FFT_LEN/2-1) { */
+      /* 	  USART_PutChar(HOST_USART, ','); */
+      /* 	} */
       /* } */
       /* USART_PutChar(HOST_USART, '\0'); */
 
       /* find out useless samples and dump them. AVG 600-800 and
-         use threshold filtering*/
+	 use threshold filtering*/
       afft = average(fft+FFT_SNR_OFFSET, FFT_SNR_LENGTH);
       /* Local search for fft peak. Same thing but at 920-940
-         and send packet if max is greater than average by some
-         threshold.*/
+	 and send packet if max is greater than average by some
+	 threshold.*/
       /* if(max_array(fft+FFT_SAMPLE_OFFSET, FFT_SAMPLE_LENGTH, NULL) - */
       /*    average(fft+FFT_SAMPLE_OFFSET, FFT_SAMPLE_LENGTH) > */
       /*    FFT_THRESHOLD)  { */
-      if(average(fft+FFT_CRICKET_OFFSET, FFT_CRICKET_LENGTH)/afft >
-         FFT_SNR ||
-	 average(fft+FFT_NORMAL_OFFSET, FFT_NORMAL_LENGTH)/afft >
-         FFT_SNR) {
-	
+      if(max_array(fft+FFT_CRICKET_OFFSET, FFT_CRICKET_LENGTH, NULL)/afft >=
+	 FFT_SNR ||
+	 max_array(fft+FFT_NORMAL_OFFSET, FFT_NORMAL_LENGTH, NULL)/afft >=
+	 FFT_SNR) {
+
 	LED_set();
-	
+
 	// we should probably send some kind of intensity and freq
-	// stuff as well I guess
-        buf[0] = '1';
+	// stuff as well
+	buf[0] = '1';
 	itoa(&buf[1],max_array(fft+FFT_SAMPLE_OFFSET,
-			       FFT_SAMPLE_LENGTH, NULL), 10);
+			       FFT_SAMPLE_LENGTH, NULL)/FFT_SNR, 10);
 
 	//USART_PutString(HOST_USART, "Signal detected!\n");
 	USART_PutString(ESP8266_USART, buf);
