@@ -1,9 +1,12 @@
-# LCD Test based on the STM32F103RBT6 microcontroller
+* Project description
+  This was the codebase used for the 2015 Microsoft Imagine cup.
 
-# This project currently does nothing more than the template I have, currently very much a WIP >.>
+  Data flow diagram goes something like this:
+  ADC -> FFT -> SNR detection -> WiFi module
 
-This is a small project designed to test the LCD on an STM32F103RBT6 dev board like [this](http://www.ebay.com/itm/STM32F103RBT6-Development-Board-W-2-8-TFT-Module-True-Color-Touch-Screen-Panel-/251075980222?pt=LH_DefaultDomain_0&hash=item3a754b6bbe)
+  Code used to be much more complicated, but moving the ESP8266 module
+  to NodeMCU made things much less complicated. Shame, I was proud of
+  some of that code.
 
-I recommend using something like stm32flash for this board, it can be found [here](http://stm32flash.googlecode.com)
-
-Feel free to use it how you want, just let me know if it helps at all :)
+  Anyway, enjoy my (pretty hacky) code. I'm sure there's a better way
+  to do some stuff in here but I'm just happy it works.
